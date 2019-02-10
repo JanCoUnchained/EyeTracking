@@ -1,0 +1,24 @@
+---
+title: "eye_tracking"
+author: "Victor Møller"
+date: "10 feb 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+
+
+```{r cars}
+summary(cars)
+```
+
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
