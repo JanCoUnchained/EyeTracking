@@ -100,18 +100,19 @@ Samples2 <- Samples %>%
   mutate(
     # velocity goes from minus to plus depending on the direction
     LowVelocity = ifelse(
-      as.numeric(MeanVelocityX)>-20 &
-      as.numeric(MeanVelocityX)<20, 1, 0)
+      as.numeric(MeanVelocityX)>-10 & #original = -20, 20
+      as.numeric(MeanVelocityX)<10, 1, 0)
   ) %>%
   # assume movement during the first 9 rows (purely to make the code work)
   mutate(LowVelocity = coalesce(LowVelocity, 0)) %>%
   
-  ## create rolling window for averaging
-  mutate(Event = (cumsum(LowVelocity) - lag(cumsum(LowVelocity), n = 20))/20) %>%
+  ## create rolling window for averaging, original = 20
+  mutate(Event = (cumsum(LowVelocity) - lag(cumsum(LowVelocity), n = 5))/5) %>%
   
   ## the next lines are very hacky
   ## if average is > .9, count as fixation
-  mutate(FixationNum = ifelse(Event >= 0.90, 1, 0),
+  ## original = 0.75
+  mutate(FixationNum = ifelse(Event >= 0.75, 1, 0),
          .count = ifelse(c(0, diff(FixationNum)) == 1, 1, 0),
          .count = coalesce(.count, 0),
          .groups = cumsum(.count),
@@ -119,13 +120,13 @@ Samples2 <- Samples %>%
   select(-c(.count, .groups)) %>% 
   
   ## otherwise count as saccade
-  mutate(SaccadeNum = ifelse(Event < 0.90, 1, 0),
+  mutate(SaccadeNum = ifelse(Event < 0.75, 1, 0),
          .count = ifelse(c(0, diff(SaccadeNum)) == 1, 1, 0),
          .count = coalesce(.count, 0),
          .groups = cumsum(.count),
          SaccadeNum = ifelse(SaccadeNum == 1, .groups, NA)) %>%
   select(-c(.count, .groups)) %>% 
-  mutate(Event = ifelse(Event >= 0.90, 'Fixation', 'Saccade'))
+  mutate(Event = ifelse(Event >= 0.75, 'Fixation', 'Saccade'))
 ```
 
 After having estimated oculomotor events, we can make more interesting analyses and plots. Here, for instance, we can update the x/y plot from above with the addition of information about events: which data points are in a fixation, and which are in a saccade?
