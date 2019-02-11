@@ -98,20 +98,20 @@ Samples2 <- Samples %>%
   group_by(ParticipantID, Trial) %>%
   ## if velocity is < 20 degrees/sec, the eye is "not moving"
   mutate(
-    # velocity goes from minus to plus depending on the direction
+    # velocity goes from minus to plus depending on the direction, ORIGINAL = -20, 20
     LowVelocity = ifelse(
-      as.numeric(MeanVelocityX)>-10 & #original = -20, 20
+      as.numeric(MeanVelocityX)>-10 &
       as.numeric(MeanVelocityX)<10, 1, 0)
   ) %>%
   # assume movement during the first 9 rows (purely to make the code work)
   mutate(LowVelocity = coalesce(LowVelocity, 0)) %>%
   
-  ## create rolling window for averaging, original = 20
+  ## create rolling window for averaging, ORIGINAL = 20
   mutate(Event = (cumsum(LowVelocity) - lag(cumsum(LowVelocity), n = 5))/5) %>%
   
   ## the next lines are very hacky
   ## if average is > .9, count as fixation
-  ## original = 0.75
+  ## ORIGINAL = 0.75
   mutate(FixationNum = ifelse(Event >= 0.75, 1, 0),
          .count = ifelse(c(0, diff(FixationNum)) == 1, 1, 0),
          .count = coalesce(.count, 0),
@@ -230,9 +230,14 @@ Fixations <- Samples2 %>%
 Let's add data about conditions in the Visual Search and Social Engagement experiments. We will use this information in our data analysis.
 
 ```{r add condition data}
-ConditionsVisualSearch <- read_delim('ForagingOrder.csv', ';')
+ConditionsVisualSearch <- read_delim('ForagingOrder.csv', ';') %>%
+  mutate(Item = ifelse(Item == "doplhins.jpg", "dolphins.jpg", as.character(Item)))
 
-Fixations <- merge(Fixations, ConditionsVisualSearch, by = c('SearchOrder', 'Trial'), all = TRUE)
+Fixations <- merge(Fixations, ConditionsVisualSearch, 
+                   by = c('SearchOrder', 'Trial'), all = TRUE)
+
+Fixations_VS <- Fixations %>%
+  filter(Task == "VisualSearch")
 ```
 
 ### Sanity Checks
@@ -354,6 +359,40 @@ Using a for-loop, make a scanpath for each participant in the Visual Search expe
 3) Can we spot the trials in which the participants found the star?
 
 ```{r scanpath exercise}
+plot_n_save2 <- function(participant) {
+    one_person <- Fixations_VS %>%
+      filter(ParticipantID == as.character(participant))
+    
+    plot <- ggplot(one_person, aes(x = PositionX, 
+                                   y = 1081 - PositionY)) +
+      geom_path(alpha = .6, color = '#F0B952') +
+      geom_point(size = one_person$Duration*5, 
+                 alpha = .6, color = '#6291D6', stroke = 1, shape = 21) +
+      # repelling text in plots: fuck that's good
+      # ggrepel::geom_text_repel(aes(label = FixationNum), size = 3, color = 'black') +
+      xlim(0,1920) + ylim(0,1080) +
+      labs(title = paste0("Visual search - ",
+                          as.character(unique(one_person$ParticipantID))),
+           subtitle = paste0("Seach order: ", 
+                             as.character(unique(one_person$SearchOrder)))) +
+      theme_bw() + theme(legend.position = 'none') +
+      facet_wrap(~Item)
+    
+    ggsave(sprintf("file%s.png", unique(one_person$ParticipantID)), plot)
+}
+
+
+# list of participants
+participants <- as.data.frame(table(Fixations_VS$ParticipantID)) %>%
+  filter(Freq != 0)
+
+participants <- as.character(participants$Var1)
+
+# test
+plot_n_save2(participants[1])
+
+# loop - WATCH OUT, PRODUCES A LOT OF FILES
+# lapply(participants, plot_n_save2)
 
 ```
 
@@ -366,7 +405,9 @@ Heatmaps can be created in a similar fashion to scanpaths using the function geo
 jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF",
                                  "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
 
-z = subset(Fixations, ParticipantID ==	'2019-2019-4_2_m12' & Item == 'space_capsules.jpg')
+z = subset(Fixations, 
+           ParticipantID ==	'2019-2019-4_2_m12' & Item == 'space_capsules.jpg')
+
 ggplot(z, aes(x = PositionX, y = 1081-PositionY)) +
   stat_density2d(geom="raster", aes(fill=..density.., alpha=sqrt(sqrt(..density..))),
                  contour=FALSE, n=1000) + 
@@ -407,7 +448,38 @@ As in Exercise 3 with scanpahts, make a heatmap for each participant in the Visu
 3) Can we spot the trials in which the participants found the star?
 
 ```{r heatmap exercise}
+eggs <- jpeg::readJPEG('pics/VisualSearch/eggs.jpg')
+eggs <- grid::rasterGrob(eggs, interpolate=TRUE)
 
+heat_n_save <- function(participant) {
+  
+  one_person <- Fixations_VS %>%
+    filter(ParticipantID == as.character(participant))
+  
+  plot <- ggplot(z, aes(x = PositionX, y = 1081-PositionY)) +
+    annotation_custom(eggs, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf) +
+    stat_density2d(geom="raster", aes(fill=..density.., alpha=sqrt(sqrt(..density..))),
+                   contour=FALSE, n=1000) + 
+    scale_alpha(range = c(0.1, 0.6)) +
+    scale_fill_gradientn(colours = jet.colors(10), trans="sqrt") +
+    # facet_wrap(~Trial) +
+    ## the following lines are for aesthetic purposes only
+    xlim(0,1920) + ylim(0,1080) +
+    #labs
+    labs(title = paste0("Heat map for visual search task - ",
+                          as.character(unique(one_person$ParticipantID))),
+           subtitle = paste0("Seach order: ", 
+                             as.character(unique(one_person$SearchOrder)))) +
+    #theme
+    theme_bw() + theme(legend.position = 'none')
+  
+  ggsave(sprintf("file%s.png", unique(one_person$ParticipantID)), plot,
+         path = "plots/heat_n_save")
+}
+
+heat_n_save(participants[1])
+
+#lapply(participants, heat_n_save)
 ```
 
 ### Area of interest
@@ -444,12 +516,48 @@ ggplot(x, aes(x = PositionX, y = PositionY, color = ParticipantID, size = Durati
 Find out whether anyone looked at the black sheep!
 
 ```{r AOI exercise 1}
+AOI_black = c(850, 1050, 0, 300)
 
+Fixations_AOI <- Fixations %>%
+  mutate(
+    fixations_black = ifelse(PositionX > 850 &
+                             PositionX < 1050 &
+                             PositionY > 0 &
+                             PositionY < 300, TRUE, FALSE)
+  )
+
+Fixations_AOI %>%
+  filter(Task == "VisualSearch" & fixations_black == TRUE & Item == "sheep.jpg") %>%
+  ggplot(aes(x = PositionX, y = PositionY, color = ParticipantID, size = Duration)) +
+  annotation_custom(img, xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf) +
+  geom_point(fill = 'white', stroke = 1, shape = 21, alpha = .7) +
+  geom_rect(xmin=AOI_black[1], 
+            xmax=AOI_black[2], 
+            ymin=AOI_black[3], 
+            ymax=AOI_black[4], fill = NA, size = 1, color = 'yellow') +
+  xlim(0,1920) + ylim(0,1080) +
+  ggtitle('Areas of interest') +
+  theme_bw() #+ theme(legend.position = 'none')
 ```
 
 #### Exericise 6: Time To First Fixation
 Find Time To First Fixation for each subject*trial in pre-defined AOI with coordinates x = 1000,1500 and y = 600, 900. The stimulus picture should be 'penguins.jpg':
 
 ```{r AOI exercise 2}
+AOI_pen = c(1000, 1500, 600, 900)
 
+Fixations_AOI <- Fixations_AOI %>%
+  mutate(
+    fixations_pen = ifelse(PositionX > 1000 &
+                             PositionX < 1500 &
+                             PositionY > 600 &
+                             PositionY < 900, 1, 0)
+  )
+
+time_to_first <- Fixations_AOI %>%
+  filter(Item == "penguins.jpg" & 
+         Task == "VisualSearch" &
+         fixations_pen == 1) %>%
+  group_by(ParticipantID) %>%
+  summarise(time_first_fixation = min(StartTime))
 ```
