@@ -1,0 +1,35 @@
+---
+title: "EYE TRACKING"
+author: "Victor Møller"
+date: "11 feb 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("~/Documents/Cognitive Science/4th semester/Eye-tracking")
+df <- read.csv("samples2018_2019.csv")
+library("tidyverse")
+
+
+
+
+```
+
+
+```{r cars}
+str(df)
+df[, 4:17] <- sapply(df[,4:17], as.character)
+df[, 4:17] <- sapply(df[,4:17], as.numeric)
+df$Year <- as.factor(df$Year)
+df$SearchOrder <- as.factor(df$SearchOrder)
+
+df$Diff <- sqrt((df$RightEye_PositionX+lag(df$RightEye_PositionX))^2+(df$RightEye_PositionY+lag(df$RightEye_PositionY))^2)
+df$Fixation <- if_else(df$diff < 2000, 1, 0, missing = NULL) #not ready
+```
+
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
