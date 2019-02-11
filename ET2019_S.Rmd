@@ -13,7 +13,8 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.align =
 ```
 
 ```{r libraries}
-library(tidyverse)
+library(pacman)
+p_load(tidyverse, gganimate, gifski, ggrepel)
 ```
 
 ## Load data
@@ -300,11 +301,13 @@ Now that we have estimate events in our sample data and checked that everything 
 
 ```{r scanpath}
 x = subset(Fixations, ParticipantID ==	'2019-2019-4_2_m12' & Item == 'sheep.jpg')
+
+# position Y is mirrored! Therefore PositionY is flipped 
 ggplot(x, aes(x = PositionX, y = 1081-PositionY)) +
   geom_path(alpha = .6, color = '#F0B952') +
   geom_point(size = x$Duration*20, alpha = .6, color = '#6291D6', stroke = 1, shape = 21) +
+  # repelling text in plots: fuck that's good
   ggrepel::geom_text_repel(aes(label = FixationNum), size = 3, color = 'black') +
-  # facet_wrap(~Trial) +
   ## the following lines are for aesthetic purposes only
   xlim(0,1920) + ylim(0,1080) +
   ggtitle('Scanpath for visual search task') +
@@ -314,7 +317,7 @@ ggplot(x, aes(x = PositionX, y = 1081-PositionY)) +
 We can also easily underlay the original stimulus picture:
 
 ```{r scanpath with image}
-img <- jpeg::readJPEG('Pics/VisualSearch/sheep.jpg')
+img <- jpeg::readJPEG('pics/VisualSearch/sheep.jpg')
 img <- grid::rasterGrob(img, interpolate=TRUE)
 
 ggplot(x, aes(x = PositionX, y = 1081-PositionY)) +

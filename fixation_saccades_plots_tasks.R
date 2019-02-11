@@ -6,6 +6,7 @@ Fixations %>%
 
 
 # POS X - VS long tailed, SE clustered
+## would make more sense, if they would be further split by task
 Fixations %>%
   ggplot(aes(PositionX)) + geom_density() +
   facet_wrap(~Task)
@@ -23,19 +24,23 @@ Saccades %>%
   facet_wrap(~Task)
 
 
-# MEAN VELOCITY - similar, concentrated tightly around 0
+# MEAN VELOCITY - concentrated tightly around 0
+## visual foraging has fatter tails though, indicating 
 Saccades %>%
   ggplot(aes(MeanVelocityX)) + geom_density() +
   facet_wrap(~Task)
 
 
 # MEAN ACCELERATION - similar, concentrated between -5000 and 5000
+## plots look different than Fabio's, probably because of our cutoff
 Saccades %>%
   ggplot(aes(MeanAccellerationX)) + geom_density() +
   facet_wrap(~Task)
 
 
 # PUPIL SIZE - two different peaks, visual search is more clustered
+## should be further split by condition & participant
+## watch out 
 Samples2 %>%
   ggplot(aes(PupilSize)) + geom_density() +
   facet_wrap(~Task)
